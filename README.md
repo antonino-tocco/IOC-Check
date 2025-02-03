@@ -16,7 +16,7 @@ Generate the API keys for OTX Alienvault and VirusTotal.
 ## Run
 
 1. Run the script using the following command:
-```python ioc_check.py --otx_api_key <OTX_API_KEY> --vt_api_key <VIRUS_TOTAL_API_KEY> --base_path <BASE_PATH>```
+```python ioc_check.py --otx_api_key <OTX_API_KEY> --vt_api_key <VIRUS_TOTAL_API_KEY> --base_path <BASE_PATH> --network```
 
 If running without the base path, the script will check for the IoCs recursively in the user home directory .
 
