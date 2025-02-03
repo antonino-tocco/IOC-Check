@@ -33,27 +33,31 @@ level_to_color = {
 log_level = LogLevel.INFO
 
 
-@singleton
 class Logger:
-    def log(self, level, message):
+    @staticmethod
+    def log(level, message):
         message = "{}: {}".format(datetime.now().strftime("%d-%m-%Y %H:%M"), message)
         if level in level_to_color:
             level_to_color[level](message)
         else:
             print(message)
 
-    def error(self, message):
+    @staticmethod
+    def error(message):
         if log_level.value >= LogLevel.ERROR.value:
-            self.log(LogLevel.ERROR, message)
+            Logger.log(LogLevel.ERROR, message)
 
-    def warning(self, message):
+    @staticmethod
+    def warning(message):
         if log_level.value >= LogLevel.WARNING.value:
-            self.log(LogLevel.WARNING, message)
+            Logger.log(LogLevel.WARNING, message)
 
-    def debug(self, message):
+    @staticmethod
+    def debug(message):
         if log_level.value >= LogLevel.DEBUG.value:
-            self.log(LogLevel.DEBUG, message)
+            Logger.log(LogLevel.DEBUG, message)
 
-    def info(self, message):
+    @staticmethod
+    def info(message):
         if log_level.value >= LogLevel.INFO.value:
-            self.log(LogLevel.INFO, message)
+            Logger.log(LogLevel.INFO, message)

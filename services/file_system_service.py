@@ -33,15 +33,42 @@ class FileSystemService(CheckService):
 
     async def check(self, base_path=None):
         self.pulses = IOCService().load_iocs()
-        files = self.__recursive_walk(base_path if base_path is not None else self.base_path)
-        for file in files:
+        if not os.path.exists(self.base_path):
+            Logger.error("FileSystemService: base path does not exist {}".format(self.base_path))
+            return
+        if not os.access(self.base_path, os.R_OK):
+            Logger.error("FileSystemService: base path is not readable {}".format(self.base_path))
+            return
+        if not os.path.isdir(self.base_path):
+            Logger.error("FileSystemService: base path is not a directory {}".format(self.base_path))
+            return
+        if not self.pulses or len(self.pulses) == 0:
+            Logger.error("FileSystemService: no pulses loaded")
+            return
+        for file in self.__recursive_walk(base_path if base_path is not None else self.base_path):
             await self.__inspect_file(file)
+
+    async def check_file(self, file: str):
+        self.pulses = IOCService().load_iocs()
+        if not os.path.exists(file):
+            Logger.error("FileSystemService: file does not exist {}".format(file))
+            return
+        if not os.access(file, os.R_OK):
+            Logger.error("FileSystemService: file is not readable {}".format(file))
+            return
+        if not os.path.isfile(file):
+            Logger.error("FileSystemService: file is not a file {}".format(file))
+            return
+        if not self.pulses or len(self.pulses) == 0:
+            Logger.error("FileSystemService: no pulses loaded")
+            return
+        await self.__inspect_file(file)
 
     async def __inspect_file(self, file: str):
         """Inspect a file for IOCs"""
         if not os.path.exists(file):
             return
-        Logger().info("FileSystemService: inspecting file {}".format(file))
+        Logger.info("FileSystemService: inspecting file {}".format(file))
         content = None
         try:
             open_mode = "rb" if is_binary(file) else "r"
@@ -50,40 +77,40 @@ class FileSystemService(CheckService):
                 if open_mode != "rb":
                     content = content.encode()
         except FileNotFoundError as e:
-            Logger().error("FileSystemService: file not found {}".format(file))
+            Logger.error("FileSystemService: file not found {}".format(file))
             return
         except PermissionError as e:
-            Logger().error("FileSystemService: permission denied {}".format(file))
+            Logger.error("FileSystemService: permission denied {}".format(file))
             return
         except Exception as e:
-            Logger().error("FileSystemService: error while opening file {}".format(e))
+            Logger.error("FileSystemService: error while opening file {}".format(e))
             return
         stat = await self.__vt_inpection(file=file, content=content)
         if stat is not None:
-            Logger().info("FileSystemService: found file {} in VT".format(file))
-            Logger().info(stat)
+            Logger.info("FileSystemService: found file {} in VT".format(file))
+            Logger.info(stat)
+        compromised = False
         for pulse in self.pulses:
             ioc_list = list(filter(lambda x: x.is_active and x.is_file_indicator(), pulse.indicators))
             for ioc in ioc_list:
                 if ioc.type in indicator_type_to_hash:
                     hash = indicator_type_to_hash[ioc.type](content).hexdigest()
                     if ioc.indicator in hash:
-                        Logger().info("FileSystemService: found IOC {} in file {} pulse {}".format(ioc.indicator, file, pulse.name))
+                        compromised = True
+                        Logger.info("FileSystemService: found IOC {} in file {} pulse {}".format(ioc.indicator, file, pulse.name))
+
 
     async def __vt_inpection(self, file, content: bytes):
         if self.vt_client is not None:
-            file_hashes = [hashlib.md5(content).hexdigest(), hashlib.sha1(content).hexdigest(),
-                           hashlib.sha256(content).hexdigest()]
+            file_hashes = [hashlib.md5(content).hexdigest(), hashlib.sha1(content).hexdigest(), hashlib.sha256(content).hexdigest()]
             for hash in file_hashes:
                 try:
                     result = self.vt_client.check(hash)
                     if result is not None:
                         stat = Stat(**result)
                         return stat
-                except vt.error.APIError as e:
-                    Logger().error("FileSystemService: error while querying VT {}".format(e))
                 except Exception as e:
-                    Logger().error("FileSystemService: error while querying VT {}".format(e))
+                    Logger.error("FileSystemService: error while querying VT {}".format(e))
 
     def __recursive_walk(self, path):
         for root, dirs, files in os.walk(path):

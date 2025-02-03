@@ -10,3 +10,6 @@ class IOC(BaseModel):
 
     def is_file_indicator(self):
         return self.type in ["FileHash-MD5", "FileHash-SHA1", "FileHash-SHA256"]
+
+    def is_network_indicator(self):
+        return self.type in ["URL", "Domain", "IPv4", "IPv6"]
